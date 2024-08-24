@@ -18,5 +18,5 @@ It is better to run on the server And in Linux use tmux or nohup to not close th
 
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/06aaaf7b-cda8-4ce3-9b47-dc4bb0d3f308" width="500" style="border: 2px solid #000; border-radius: 10px; padding: 5px;"/>
+  <img src="https://github.com/user-attachments/assets/a4465a65-094d-4727-88d1-ec253f2e500e" width="400" style="border: 2px solid #000; border-radius: 10px; padding: 5px;"/>
 </div>
