@@ -13,7 +13,7 @@ I don't feel like explaining right now, I have completed the program, build and 
 
 It is better to run on the server And in Linux use tmux or nohup to not close the session
 
-**How to get access to Major for urls.txt**
+**How to access Major on Android for urls.txt**
 
 
 https://github.com/user-attachments/assets/f51c548a-4129-455d-953c-3da838a005cd
