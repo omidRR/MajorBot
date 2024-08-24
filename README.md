@@ -9,8 +9,6 @@
 + Auto Get New token
 ``Please place the account link in the urls.txt file and list the links one below the other for multi-accounting.``
 
-I don't feel like explaining right now, I have completed the program, build and use it yourself
-
 It is better to run on the server And in Linux use tmux or nohup to not close the session
 
 **How to access Major on Android for urls.txt**
