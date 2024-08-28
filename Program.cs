@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json.Linq;
 using RestSharp;
+using System;
 using System.Net;
 using System.Web;
 
@@ -40,6 +41,7 @@ class Program
             timers.Add(requestTimer);
             foreach (var url in urls)
             {
+                Thread.Sleep(1500);
                 var uri = new Uri(url.Path);
                 var query = HttpUtility.ParseQueryString(uri.Fragment.TrimStart('#'));
                 var tgWebAppData = query["tgWebAppData"];
@@ -67,7 +69,6 @@ class Program
                 var coinsTimer = new Timer(async _ => await SendCoinsRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(5)));
                 claimTimers.Add(coinsTimer);
 
-
             }
 
             Console.ReadLine();
@@ -86,6 +87,7 @@ class Program
             {
                 try
                 {
+                    Thread.Sleep(2000);
                     await SendRequest(url);
                 }
                 catch (Exception ex)
@@ -151,6 +153,8 @@ class Program
 
                 await SendSecondRequest(token, accountInfo);
             }
+            Thread.Sleep(2000);
+
         }
         catch (Exception ex)
         {
@@ -192,6 +196,7 @@ class Program
     {
         try
         {
+            Thread.Sleep(2000);
             var client = new RestClient("https://major.glados.app");
             var request = new RestRequest("/api/auth/tg/", Method.Post);
 
@@ -231,6 +236,13 @@ class Program
             }
             else
             {
+                if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+                {
+                    Console.WriteLine($"{accountInfo}[ErrorGetnewToken]==>request failed with status code: {response.StatusCode}");
+                    Console.WriteLine($"{accountInfo}[ErrorGetnewToken]==>im Trying Again...");
+                    Thread.Sleep(5000);
+                    await GetNewToken(tgWebAppData, accountInfo);
+                }
                 Console.WriteLine($"{accountInfo}==>Request failed with status code: {response.StatusCode}");
                 Console.WriteLine(response.Content);
                 return null;
@@ -246,6 +258,7 @@ class Program
     {
         try
         {
+            Thread.Sleep(2000);
             var client = new RestClient("https://major.glados.app");
             var request = new RestRequest("/api/tasks/?is_daily=true", Method.Get);
 
@@ -291,6 +304,13 @@ class Program
             }
             else
             {
+                if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+                {
+                    Console.WriteLine($"{accountInfo}[Visit]==>Visit request failed with status code: {response.StatusCode}");
+                    Console.WriteLine($"{accountInfo}[ErrorVisit]==>im Trying Again...");
+                    Thread.Sleep(5000);
+                    await SendSecondRequest(token,accountInfo);
+                }
                 Console.WriteLine($"{accountInfo}==>Second request failed with status code: {response.StatusCode}");
                 Console.WriteLine(response.Content);
                 return false;
@@ -316,6 +336,8 @@ class Program
     {
         try
         {
+            Thread.Sleep(2000);
+
             var client = new RestClient("https://major.glados.app");
             var request = new RestRequest("/api/tasks/", Method.Post);
 
@@ -350,6 +372,14 @@ class Program
             }
             else
             {
+                if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+                {
+                    Console.WriteLine($"{accountInfo}[ErrorSendTask]==>request failed with status code: {response.StatusCode}");
+                    Console.WriteLine($"{accountInfo}[ErrorSendTask]==>im Trying Again...");
+                    Thread.Sleep(5000);
+                    await SendTaskRequest(token,taskId, accountInfo);
+                    return;
+                }
                 Console.WriteLine($"{accountInfo}==>Task request failed with status code: {response.StatusCode}");
                 Console.WriteLine(response.Content);
             }
@@ -363,6 +393,8 @@ class Program
     {
         try
         {
+            Thread.Sleep(2000);
+
             var client = new RestClient("https://major.glados.app");
             var request = new RestRequest("/api/roulette", Method.Post);
 
@@ -412,6 +444,20 @@ class Program
             }
             else if (response.IsSuccessful is false)
             {
+                if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+                {
+                    Console.WriteLine($"{accountInfo}[ErrorSendRoulette]==>request failed with status code: {response.StatusCode}");
+                    Console.WriteLine($"{accountInfo}[ErrorSendRoulette]==>im Trying Again...");
+                    Thread.Sleep(5000);
+                    await SendRouletteRequest(url, accountInfo);
+                    return;
+                }
+                if (response.Content is null || response.Content == "")
+                {
+                    Console.WriteLine($"{accountInfo}==>Error: {response.Content}");
+                    return;
+                }
+              
                 var jsonResponse = JObject.Parse(response.Content);
 
                 if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
@@ -429,6 +475,14 @@ class Program
             }
             else
             {
+                if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+                {
+                    Console.WriteLine($"{accountInfo}[ErrorSendRoulette]==>request failed with status code: {response.StatusCode}");
+                    Console.WriteLine($"{accountInfo}[ErrorSendRoulette]==>im Trying Again...");
+                    Thread.Sleep(5000);
+                    await SendRouletteRequest(url, accountInfo);
+                    return;
+                }
                 Console.WriteLine($"{accountInfo}==>Roulette request failed with status code: {response.StatusCode}");
                 Console.WriteLine(response.Content);
             }
@@ -442,6 +496,8 @@ class Program
     {
         try
         {
+            Thread.Sleep(2000);
+
             var randomCoins = random.Next(850, 916);
 
             var client = new RestClient("https://major.glados.app");
@@ -514,6 +570,14 @@ class Program
             }
             else
             {
+                if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+                {
+                    Console.WriteLine($"{accountInfo}[ErrorCoin]==>request failed with status code: {response.StatusCode}");
+                    Console.WriteLine($"{accountInfo}[ErrorCoin]==>im Trying Again...");
+                    Thread.Sleep(5000);
+                    await SendCoinsRequest(url, accountInfo);
+                    return;
+                }
                 Console.WriteLine($"{accountInfo}==>Coins request failed with status code: {response.StatusCode}");
                 Console.WriteLine(response.Content);
             }
@@ -528,6 +592,8 @@ class Program
     {
         try
         {
+            Thread.Sleep(2000);
+
             var client = new RestClient("https://major.glados.app");
             var request = new RestRequest("/api/user-visits/visit/", Method.Post);
 
@@ -551,7 +617,7 @@ class Program
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
                 Console.WriteLine($"{accountInfo}[Visit]==>Unauthorized, attempting to refresh token...");
-
+                Thread.Sleep(2000);
                 string newToken = await GetNewTokenFromRequest(url);
 
                 if (newToken != null)
@@ -570,6 +636,14 @@ class Program
             }
             else
             {
+                if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+                {
+                    Console.WriteLine($"{accountInfo}[Visit]==>Visit request failed with status code: {response.StatusCode}");
+                    Console.WriteLine($"{accountInfo}[ErrorVisit]==>im Trying Again...");
+                    Thread.Sleep(5000);
+                    await SendVisitRequest(url,accountInfo);
+                    return;
+                }
                 Console.WriteLine($"{accountInfo}[Visit]==>Visit request failed with status code: {response.StatusCode}");
                 Console.WriteLine($"{accountInfo}[ErrorVisit]==>{response.Content}");
             }
