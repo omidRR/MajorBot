@@ -62,7 +62,7 @@ class Program
                 var visitTimer = new Timer(async _ => await SendVisitRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(3));
                 TimerVisit.Add(visitTimer);
 
-                var claimTimer = new Timer(async _ => await SendRouletteRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(5)));
+                var claimTimer = new Timer(async _ => await SendRouletteRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(6)));
                 claimTimers.Add(claimTimer);
 
 
@@ -87,7 +87,7 @@ class Program
             {
                 try
                 {
-                    Thread.Sleep(2000);
+                    Thread.Sleep(4000);
                     await SendRequest(url);
                 }
                 catch (Exception ex)
@@ -108,7 +108,7 @@ class Program
     {
         try
         {
-            Thread.Sleep(1000);
+            Thread.Sleep(2000);
             var uri = new Uri(url.Path);
             var query = HttpUtility.ParseQueryString(uri.Fragment.TrimStart('#'));
             var tgWebAppData = query["tgWebAppData"];
@@ -134,6 +134,7 @@ class Program
             string token = GetStoredToken(tokenFilePath, accountKey);
             if (string.IsNullOrEmpty(token))
             {
+                Thread.Sleep(2000);
                 token = await GetNewToken(tgWebAppData, accountInfo);
                 SaveToken(tokenFilePath, accountKey, token);
             }
@@ -150,7 +151,7 @@ class Program
 
 
                 url.Token = token;
-
+                Thread.Sleep(2000);
                 await SendSecondRequest(token, accountInfo);
             }
             Thread.Sleep(2000);
@@ -584,7 +585,7 @@ class Program
     {
         try
         {
-            Thread.Sleep(2000);
+            Thread.Sleep(3000);
 
             var client = new RestClient("https://major.glados.app");
             var request = new RestRequest("/api/user-visits/visit/", Method.Post);
@@ -640,6 +641,8 @@ class Program
                 Console.WriteLine($"{accountInfo}[Visit]==>Visit request failed with status code: {response.StatusCode}");
                 Console.WriteLine($"{accountInfo}[ErrorVisit]==>{response.Content}");
             }
+            Thread.Sleep(2000);
+            await Task.Delay(2000);
         }
         catch (Exception ex)
         {
