@@ -5,7 +5,7 @@
 + Receive online events every day
 + Receive 10,000 story and 20,000 channel points every day
 + Receive automatic Roulette points every 8 hours
-+ Auto Claim Swipe Coin
++ Auto Claim Swipe Coin between 2700 & 2980
 + Automatic receipt of Hold coin every 8 hours between 890 and 914
 + Auto Get New token
 ``Please place the account link in the urls.txt file and list the links one below the other for multi-accounting.``
