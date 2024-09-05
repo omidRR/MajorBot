@@ -62,12 +62,15 @@ class Program
                 var visitTimer = new Timer(async _ => await SendVisitRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(3));
                 TimerVisit.Add(visitTimer);
 
-                var claimTimer = new Timer(async _ => await SendRouletteRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(6)));
+                var claimTimer = new Timer(async _ => await SendRouletteRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(2)));
                 claimTimers.Add(claimTimer);
 
 
-                var coinsTimer = new Timer(async _ => await SendCoinsRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(3)));
+                var coinsTimer = new Timer(async _ => await SendCoinsRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(5)));
                 claimTimers.Add(coinsTimer);
+
+                var SwipeCoinsTimer = new Timer(async _ => await SendSwipeCoinsRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(7)));
+                claimTimers.Add(SwipeCoinsTimer);
 
             }
 
@@ -284,6 +287,7 @@ class Program
                 Thread.Sleep(5000);
                 await SendSecondRequest(token, accountInfo);
             }
+
             if (response.IsSuccessful)
             {
                 Console.WriteLine($"{accountInfo}==>Task list received successfully.");
@@ -372,15 +376,20 @@ class Program
                 await SendTaskRequest(token, taskId, accountInfo);
                 return;
             }
+            if (response.Content.Contains("Not Found"))
+            {
+                Console.WriteLine($"{accountInfo}[[SendTask]]==>request failed with status code: {response.StatusCode}");
+                return;
+            }
             if (response.IsSuccessful)
             {
-                Console.WriteLine($"{accountInfo}==>Task '{taskId}' successfully triggered.");
+                Console.WriteLine($"{accountInfo}[SendTask]==>Task '{taskId}' successfully triggered.");
                 Console.WriteLine(response.Content);
             }
             else
             {
                
-                Console.WriteLine($"{accountInfo}==>Task request failed with status code: {response.StatusCode}");
+                Console.WriteLine($"{accountInfo}[ErrorSendTask]==>request failed: {response.StatusCode} ==> Response==>{response.Content}");
                 Console.WriteLine(response.Content);
             }
         }
@@ -396,7 +405,7 @@ class Program
             Thread.Sleep(2000);
 
             var client = new RestClient("https://major.glados.app");
-            var request = new RestRequest("/api/roulette", Method.Post);
+            var request = new RestRequest("/api/roulette/", Method.Post);
 
             request.AddHeader("accept", "application/json, text/plain, */*");
             request.AddHeader("accept-language", "en-US,en;q=0.9,fa;q=0.8");
@@ -457,9 +466,13 @@ class Program
                     Console.WriteLine($"{accountInfo}==>Error: {response.Content}");
                     return;
                 }
-              
+                if (response.Content.Contains("Not Found"))
+                {
+                    Console.WriteLine($"{accountInfo}[ErrorSendRouletteNOTFOUND!]==>request failed with status code: {response.StatusCode}");
+                    return;
+                }
                 var jsonResponse = JObject.Parse(response.Content);
-
+               
                 if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
                 {
                     double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
@@ -490,7 +503,7 @@ class Program
         {
             Thread.Sleep(2000);
 
-            var randomCoins = random.Next(850, 916);
+            var randomCoins = random.Next(890, 914);
 
             var client = new RestClient("https://major.glados.app");
             var request = new RestRequest("/api/bonuses/coins/", Method.Post);
@@ -542,6 +555,11 @@ class Program
                     response = await client.ExecuteAsync(request);
                 }
             }
+            if (response.Content.Contains("Not Found"))
+            {
+                Console.WriteLine($"{accountInfo}[ErrorSendRouletteNOTFOUND!]==>request failed with status code: {response.StatusCode}");
+                return;
+            }
             if (response.IsSuccessful)
             {
                 var jsonResponse = JObject.Parse(response.Content);
@@ -580,6 +598,106 @@ class Program
             Console.WriteLine($"{accountInfo}==>An error occurred in the coins request: {ex.Message}");
         }
     }
+    static async Task SendSwipeCoinsRequest(UrlInfo url, string accountInfo)
+    {
+        try
+        {
+            Thread.Sleep(2000);
+            var randomCoins = random.Next(2700, 2980);
+            var client = new RestClient("https://major.glados.app");
+            var request = new RestRequest("/api/swipe_coin/", Method.Post);
+
+            request.AddHeader("accept", "application/json, text/plain, */*");
+            request.AddHeader("accept-language", "en-US,en;q=0.9,fa;q=0.8");
+            request.AddHeader("authorization", $"Bearer {url.Token}");
+            request.AddHeader("content-type", "application/json");
+            request.AddHeader("cookie", "SL_G_WPT_TO=fa; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1");
+            request.AddHeader("dnt", "1");
+            request.AddHeader("origin", "https://major.glados.app");
+            request.AddHeader("priority", "u=1, i");
+            request.AddHeader("referer", "https://major.glados.app/reward");
+            request.AddHeader("sec-ch-ua", "\"Not)A;Brand\";v=\"99\", \"Google Chrome\";v=\"127\", \"Chromium\";v=\"127\"");
+            request.AddHeader("sec-ch-ua-mobile", "?0");
+            request.AddHeader("sec-ch-ua-platform", "\"Windows\"");
+            request.AddHeader("sec-fetch-dest", "empty");
+            request.AddHeader("sec-fetch-mode", "cors");
+            request.AddHeader("sec-fetch-site", "same-origin");
+
+            var body = new
+            {
+                coins = randomCoins
+            };
+
+            request.AddJsonBody(body);
+
+            var response = await client.ExecuteAsync(request);
+            if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+            {
+                Console.WriteLine($"{accountInfo}[SwipeCoins]==>request failed with status code: {response.StatusCode}");
+                Console.WriteLine($"{accountInfo}[SwipeCoins]==>im Trying Again...");
+                Thread.Sleep(5000);
+                await SendSwipeCoinsRequest(url, accountInfo);
+                return;
+            }
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Console.WriteLine($"{accountInfo}[SwipeCoins]==>Unauthorized, attempting to refresh token...");
+
+                string newToken = await GetNewTokenFromRequest(url);
+
+                if (newToken != null)
+                {
+                    url.Token = newToken;
+
+                    request.AddOrUpdateHeader("authorization", $"Bearer {url.Token}");
+
+                    response = await client.ExecuteAsync(request);
+                }
+            }
+            if (response.Content.Contains("Not Found"))
+            {
+                Console.WriteLine($"{accountInfo}[SwipeCoins!]==>request failed with status code: {response.StatusCode}");
+                return;
+            }
+            if (response.IsSuccessful)
+            {
+                var jsonResponse = JObject.Parse(response.Content);
+
+                Console.WriteLine($"{accountInfo}[SwipeCoins]==>==>Coins request succeeded with {randomCoins} coins.");
+            }
+            else if (response.IsSuccessful is false)
+            {
+                var jsonResponse = JObject.Parse(response.Content);
+
+                if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
+                {
+                    double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
+
+
+                    DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
+
+
+                    TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
+                    Console.WriteLine($"{accountInfo}[SwipeCoins]==>==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
+
+
+                    await Task.Delay(waitTime);
+                    await SendSwipeCoinsRequest(url, accountInfo);
+                }
+            }
+            else
+            {
+
+                Console.WriteLine($"{accountInfo}==>[SwipeCoins]==>Coins request failed with status code: {response.StatusCode}");
+                Console.WriteLine(response.Content);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{accountInfo}[SwipeCoins]==>==>An error occurred in the coins request: {ex.Message}");
+        }
+    }
+
 
     static async Task SendVisitRequest(UrlInfo url, string accountInfo)
     {
@@ -630,7 +748,11 @@ class Program
                     response = await client.ExecuteAsync(request);
                 }
             }
-
+            if (response.Content.Contains("Not Found"))
+            {
+                Console.WriteLine($"{accountInfo}[ErrorSendRouletteNOTFOUND!]==>request failed with status code: {response.StatusCode}");
+                return;
+            }
             if (response.IsSuccessful)
             {
                 Console.WriteLine($"{accountInfo}[OkVisit]==>{response.Content}");
