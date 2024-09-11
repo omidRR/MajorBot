@@ -1,6 +1,5 @@
 ﻿using Newtonsoft.Json.Linq;
 using RestSharp;
-using System;
 using System.Net;
 using System.Web;
 
@@ -42,22 +41,42 @@ class Program
             foreach (var url in urls)
             {
                 Thread.Sleep(1500);
-                var uri = new Uri(url.Path);
-                var query = HttpUtility.ParseQueryString(uri.Fragment.TrimStart('#'));
-                var tgWebAppData = query["tgWebAppData"];
-                if (string.IsNullOrEmpty(tgWebAppData))
+                Uri uri;
+                bool isValidUri = Uri.TryCreate(url.Path, UriKind.Absolute, out uri);
+
+                string queryData;
+                if (isValidUri && uri.Fragment.Contains("tgWebAppData"))
                 {
-                    LogError($"Invalid tgWebAppData in URL: {url.Path}");
-                    return;
+                    var query = HttpUtility.ParseQueryString(uri.Fragment.TrimStart('#'));
+                    queryData = query["tgWebAppData"];
+                }
+                else if (isValidUri)
+                {
+                    var query = HttpUtility.ParseQueryString(uri.Query);
+                    queryData = uri.Query;
+                }
+                else
+                {
+                    queryData = url.Path;
                 }
 
-                var decodedData = HttpUtility.UrlDecode(tgWebAppData);
+                var decodedData = HttpUtility.UrlDecode(queryData);
                 var keyValuePairs = HttpUtility.ParseQueryString(decodedData);
                 var userDataJson = keyValuePairs["user"];
+
+                if (string.IsNullOrEmpty(userDataJson))
+                {
+                    LogError($"Invalid user data in URL: {url.Path}");
+                    continue;
+                }
+
                 var userData = JObject.Parse(userDataJson);
                 var devAuthData = (long)userData["id"];
                 var firstName = (string)userData["first_name"];
                 var accountInfo = $"[{devAuthData}_{firstName}]";
+
+
+
 
                 var visitTimer = new Timer(async _ => await SendVisitRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(3));
                 TimerVisit.Add(visitTimer);
@@ -114,65 +133,81 @@ class Program
         }
     }
 
+
+
     static async Task SendRequest(UrlInfo url)
     {
         try
         {
-
             Thread.Sleep(2000);
-            var uri = new Uri(url.Path);
-            var query = HttpUtility.ParseQueryString(uri.Fragment.TrimStart('#'));
-            var tgWebAppData = query["tgWebAppData"];
-            if (string.IsNullOrEmpty(tgWebAppData))
+            Uri uri;
+
+            bool isValidUri = Uri.TryCreate(url.Path, UriKind.Absolute, out uri);
+
+            string queryData;
+
+            if (isValidUri && uri.Fragment.Contains("tgWebAppData"))
             {
-                LogError($"Invalid tgWebAppData in URL: {url.Path}");
+                var query = HttpUtility.ParseQueryString(uri.Fragment.TrimStart('#'));
+                queryData = query["tgWebAppData"];
+            }
+            else if (isValidUri)
+            {
+                var query = HttpUtility.ParseQueryString(uri.Query);
+                queryData = uri.Query;
+            }
+            else
+            {
+                queryData = url.Path;
+            }
+
+            var decodedData = HttpUtility.UrlDecode(queryData);
+            var keyValuePairs = HttpUtility.ParseQueryString(decodedData);
+            var userDataJson = keyValuePairs["user"];
+
+            if (string.IsNullOrEmpty(userDataJson))
+            {
+                LogError($"No user data found in input: {url.Path}");
                 return;
             }
 
-            var decodedData = HttpUtility.UrlDecode(tgWebAppData);
-            var keyValuePairs = HttpUtility.ParseQueryString(decodedData);
-            var userDataJson = keyValuePairs["user"];
             var userData = JObject.Parse(userDataJson);
             var devAuthData = (long)userData["id"];
             var firstName = (string)userData["first_name"];
             var accountInfo = $"[{devAuthData}_{firstName}]";
 
-            // for keys
             var tokenFilePath = Path.Combine(currentDirectory, "tokens.json");
-
             string accountKey = devAuthData.ToString();
 
             string token = GetStoredToken(tokenFilePath, accountKey);
             if (string.IsNullOrEmpty(token))
             {
                 Thread.Sleep(2000);
-                token = await GetNewToken(tgWebAppData, accountInfo);
+                token = await GetNewToken(queryData, accountInfo);
                 SaveToken(tokenFilePath, accountKey, token);
             }
-
 
             url.Token = token;
 
             bool success = await SendSecondRequest(token, accountInfo);
             if (!success)
             {
-
-                token = await GetNewToken(tgWebAppData, accountInfo);
+                token = await GetNewToken(queryData, accountInfo);
                 SaveToken(tokenFilePath, accountKey, token);
-
 
                 url.Token = token;
                 Thread.Sleep(2000);
                 await SendSecondRequest(token, accountInfo);
             }
             Thread.Sleep(2000);
-
         }
         catch (Exception ex)
         {
             Console.WriteLine($"An error occurred: {ex.Message}");
         }
     }
+
+
 
 
     static string GetStoredToken(string filePath, string accountKey)
@@ -254,7 +289,7 @@ class Program
             }
             else
             {
-           
+
                 Console.WriteLine($"{accountInfo}==>Request failed with status code: {response.StatusCode}");
                 Console.WriteLine(response.Content);
                 return null;
@@ -396,7 +431,7 @@ class Program
             }
             else
             {
-               
+
                 Console.WriteLine($"{accountInfo}[ErrorSendTask]==>request failed: {response.StatusCode} ==> Response==>{response.Content}");
                 Console.WriteLine(response.Content);
             }
@@ -605,7 +640,7 @@ class Program
             }
             else
             {
-            
+
                 Console.WriteLine($"{accountInfo}==>Coins request failed with status code: {response.StatusCode}");
                 Console.WriteLine(response.Content);
             }
@@ -790,25 +825,25 @@ class Program
 
                 if (response.Content.Contains("blocked_until"))
                 {
-                    
-                var jsonResponse = JObject.Parse(response.Content);
 
-                if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
-                {
-                    double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
+                    var jsonResponse = JObject.Parse(response.Content);
 
-
-                    DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
+                    if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
+                    {
+                        double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
 
 
-                    TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
-                    Console.WriteLine(
-                        $"{accountInfo}[PavelCoins]==>==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
+                        DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
 
 
-                    await Task.Delay(waitTime);
-                    await SendPavelCoinsRequest(url, accountInfo);
-                }
+                        TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
+                        Console.WriteLine(
+                            $"{accountInfo}[PavelCoins]==>==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
+
+
+                        await Task.Delay(waitTime);
+                        await SendPavelCoinsRequest(url, accountInfo);
+                    }
                 }
             }
             else
@@ -932,7 +967,7 @@ class Program
             }
             else
             {
-            
+
                 Console.WriteLine($"{accountInfo}[Visit]==>Visit request failed with status code: {response.StatusCode}");
                 Console.WriteLine($"{accountInfo}[ErrorVisit]==>{response.Content}");
             }
