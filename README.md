@@ -5,12 +5,23 @@
 + Receive online events every day
 + Receive 10,000 story and 20,000 channel points every day
 + Receive automatic Roulette points every 8 hours
-+ Auto Claim Swipe Coin between 2700 & 2980
-+ Automatic receipt of Hold coin every 8 hours between 890 and 914
++ Auto Claim Swipe Coin between 2880 & 2980
++ Auto Claim of Hold coin every 8 hours between 890 and 914
++ Auto Claim of Durov Puzzel every 8 hours Get 5000 Coin
 + Auto Get New token
 ``Please place the account link in the urls.txt file and list the links one below the other for multi-accounting.``
 
 It is better to run on the server And in Linux use tmux or nohup to not close the session
+
+
+**How to access Major on TDdesktop for urls.txt (Easy method)**
+
+`copy(Telegram.WebApp.initData)`
+
+https://github.com/user-attachments/assets/fafa90bb-5ff5-4908-a02f-6c35d80e4238
+
+
+
 
 **How to access Major on Android for urls.txt**
 
