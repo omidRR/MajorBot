@@ -72,6 +72,13 @@ class Program
                 var SwipeCoinsTimer = new Timer(async _ => await SendSwipeCoinsRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(7)));
                 claimTimers.Add(SwipeCoinsTimer);
 
+
+                var PavelCoinsTimer = new Timer(async _ => await SendPavelCoinsRequest(url, accountInfo), null, TimeSpan.Zero, TimeSpan.FromHours(8).Add(TimeSpan.FromMinutes(20)));
+                claimTimers.Add(PavelCoinsTimer);
+
+
+
+                await JoinSquadRequest(url, accountInfo);
             }
 
             Console.ReadLine();
@@ -111,6 +118,7 @@ class Program
     {
         try
         {
+
             Thread.Sleep(2000);
             var uri = new Uri(url.Path);
             var query = HttpUtility.ParseQueryString(uri.Fragment.TrimStart('#'));
@@ -471,19 +479,24 @@ class Program
                     Console.WriteLine($"{accountInfo}[ErrorSendRouletteNOTFOUND!]==>request failed with status code: {response.StatusCode}");
                     return;
                 }
-                var jsonResponse = JObject.Parse(response.Content);
-               
-                if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
+
+                if (response.Content.Contains("blocked_until"))
                 {
-                    double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
+                    var jsonResponse = JObject.Parse(response.Content);
 
-                    DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
+                    if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
+                    {
+                        double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
 
-                    TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
-                    Console.WriteLine($"{accountInfo}==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
+                        DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
 
-                    await Task.Delay(waitTime);
-                    await SendRouletteRequest(url, accountInfo);
+                        TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
+                        Console.WriteLine(
+                            $"{accountInfo}==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
+
+                        await Task.Delay(waitTime);
+                        await SendRouletteRequest(url, accountInfo);
+                    }
                 }
             }
             else
@@ -568,22 +581,26 @@ class Program
             }
             else if (response.IsSuccessful is false)
             {
-                var jsonResponse = JObject.Parse(response.Content);
-
-                if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
+                if (response.Content.Contains("blocked_until"))
                 {
-                    double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
+                    var jsonResponse = JObject.Parse(response.Content);
+
+                    if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
+                    {
+                        double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
 
 
-                    DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
+                        DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
 
 
-                    TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
-                    Console.WriteLine($"{accountInfo}==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
+                        TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
+                        Console.WriteLine(
+                            $"{accountInfo}==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
 
 
-                    await Task.Delay(waitTime);
-                    await SendCoinsRequest(url, accountInfo);
+                        await Task.Delay(waitTime);
+                        await SendCoinsRequest(url, accountInfo);
+                    }
                 }
             }
             else
@@ -603,7 +620,7 @@ class Program
         try
         {
             Thread.Sleep(2000);
-            var randomCoins = random.Next(2700, 2980);
+            var randomCoins = random.Next(2880, 2980);
             var client = new RestClient("https://major.glados.app");
             var request = new RestRequest("/api/swipe_coin/", Method.Post);
 
@@ -667,22 +684,26 @@ class Program
             }
             else if (response.IsSuccessful is false)
             {
-                var jsonResponse = JObject.Parse(response.Content);
-
-                if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
+                if (response.Content.Contains("blocked_until"))
                 {
-                    double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
+                    var jsonResponse = JObject.Parse(response.Content);
+
+                    if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
+                    {
+                        double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
 
 
-                    DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
+                        DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
 
 
-                    TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
-                    Console.WriteLine($"{accountInfo}[SwipeCoins]==>==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
+                        TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
+                        Console.WriteLine(
+                            $"{accountInfo}[SwipeCoins]==>==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
 
 
-                    await Task.Delay(waitTime);
-                    await SendSwipeCoinsRequest(url, accountInfo);
+                        await Task.Delay(waitTime);
+                        await SendSwipeCoinsRequest(url, accountInfo);
+                    }
                 }
             }
             else
@@ -698,6 +719,158 @@ class Program
         }
     }
 
+    static async Task SendPavelCoinsRequest(UrlInfo url, string accountInfo)
+    {
+        try
+        {
+            Thread.Sleep(2000);
+
+            var jsonData = await GetJsonFromUrl("https://raw.githubusercontent.com/chitoz1300/REXBOT/main/Pavelmajor.json");
+
+            var choices = jsonData.ToObject<Dictionary<string, int>>();
+
+            var client = new RestClient("https://major.bot");
+            var request = new RestRequest("/api/durov/", Method.Post);
+
+            request.AddHeader("accept", "application/json, text/plain, */*");
+            request.AddHeader("accept-language", "en-US,en;q=0.9,fa;q=0.8");
+            request.AddHeader("authorization", $"Bearer {url.Token}");
+            request.AddHeader("content-type", "application/json");
+            request.AddHeader("cookie", "SL_G_WPT_TO=fa; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1");
+            request.AddHeader("dnt", "1");
+            request.AddHeader("origin", "https://major.bot");
+            request.AddHeader("priority", "u=1, i");
+            request.AddHeader("referer", "https://major.bot/games/puzzle-durov");
+            request.AddHeader("sec-ch-ua", "\"Chromium\";v=\"128\", \"Not;A=Brand\";v=\"24\", \"Google Chrome\";v=\"128\"");
+            request.AddHeader("sec-ch-ua-mobile", "?0");
+            request.AddHeader("sec-ch-ua-platform", "\"Windows\"");
+            request.AddHeader("sec-fetch-dest", "empty");
+            request.AddHeader("sec-fetch-mode", "cors");
+            request.AddHeader("sec-fetch-site", "same-origin");
+            request.AddHeader("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36");
+
+            request.AddJsonBody(choices);
+
+            var response = await client.ExecuteAsync(request);
+            if (response.StatusCode == HttpStatusCode.GatewayTimeout)
+            {
+                Console.WriteLine($"{accountInfo}[PavelCoins]==>request failed with status code: {response.StatusCode}");
+                Console.WriteLine($"{accountInfo}[PavelCoins]==>im Trying Again...");
+                Thread.Sleep(5000);
+                await SendPavelCoinsRequest(url, accountInfo);
+                return;
+            }
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Console.WriteLine($"{accountInfo}[PavelCoins]==>Unauthorized, attempting to refresh token...");
+
+                string newToken = await GetNewTokenFromRequest(url);
+
+                if (newToken != null)
+                {
+                    url.Token = newToken;
+
+                    request.AddOrUpdateHeader("authorization", $"Bearer {url.Token}");
+
+                    response = await client.ExecuteAsync(request);
+                }
+            }
+            if (response.Content.Contains("Not Found"))
+            {
+                Console.WriteLine($"{accountInfo}[PavelCoins!]==>request failed with status code: {response.StatusCode}");
+                return;
+            }
+            if (response.IsSuccessful)
+            {
+                var jsonResponse = JObject.Parse(response.Content);
+                Console.WriteLine($"{accountInfo}[PavelCoins]==>Coins request succeeded.");
+            }
+            else if (response.IsSuccessful is false)
+            {
+
+                if (response.Content.Contains("blocked_until"))
+                {
+                    
+                var jsonResponse = JObject.Parse(response.Content);
+
+                if (jsonResponse["detail"] != null && jsonResponse["detail"]["blocked_until"] != null)
+                {
+                    double blockedUntil = jsonResponse["detail"]["blocked_until"].Value<double>();
+
+
+                    DateTime blockedTime = DateTimeOffset.FromUnixTimeSeconds((long)blockedUntil).DateTime;
+
+
+                    TimeSpan waitTime = blockedTime - DateTime.UtcNow + TimeSpan.FromMinutes(5);
+                    Console.WriteLine(
+                        $"{accountInfo}[PavelCoins]==>==>Need to wait until: {blockedTime} (Adding 5 minutes extra). Total wait: {waitTime.TotalMinutes} minutes");
+
+
+                    await Task.Delay(waitTime);
+                    await SendPavelCoinsRequest(url, accountInfo);
+                }
+                }
+            }
+            else
+            {
+                Console.WriteLine($"{accountInfo}[PavelCoins]==>Coins request failed with status code: {response.StatusCode}");
+                Console.WriteLine(response.Content);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{accountInfo}[PavelCoins]==>An error occurred in the coins request: {ex.Message}");
+        }
+    }
+
+    static async Task<JObject> GetJsonFromUrl(string url)
+    {
+        using (var httpClient = new HttpClient())
+        {
+            var response = await httpClient.GetStringAsync(url);
+            return JObject.Parse(response);
+        }
+    }
+
+
+    static async Task JoinSquadRequest(UrlInfo url, string accountInfo)
+    {
+        try
+        {
+            var client = new RestClient("https://major.glados.app");
+            var request = new RestRequest("/api/squads/1397368454/join/", Method.Post);
+
+            request.AddHeader("accept", "application/json, text/plain, */*");
+            request.AddHeader("accept-language", "en-US,en;q=0.9,fa;q=0.8");
+            request.AddHeader("authorization", $"Bearer {url.Token}");
+            request.AddHeader("content-type", "application/json");
+            request.AddHeader("cookie", "SL_G_WPT_TO=fa; SL_GWPT_Show_Hide_tmp=1; SL_wptGlobTipTmp=1");
+            request.AddHeader("dnt", "1");
+            request.AddHeader("origin", "https://major.glados.app");
+            request.AddHeader("priority", "u=1, i");
+            request.AddHeader("referer", "https://major.glados.app/squad/1397368454");
+            request.AddHeader("sec-ch-ua", "\"Not)A;Brand\";v=\"99\", \"Google Chrome\";v=\"127\", \"Chromium\";v=\"127\"");
+            request.AddHeader("sec-ch-ua-mobile", "?0");
+            request.AddHeader("sec-ch-ua-platform", "\"Windows\"");
+            request.AddHeader("sec-fetch-dest", "empty");
+            request.AddHeader("sec-fetch-mode", "cors");
+            request.AddHeader("sec-fetch-site", "same-origin");
+
+            var response = await client.ExecuteAsync(request);
+            if (response.IsSuccessful)
+            {
+                Console.WriteLine($"{accountInfo}==>Successfully joined the squad.");
+            }
+            else
+            {
+                Console.WriteLine($"{accountInfo}==>: {response.StatusCode} + : Response : {response.Content} ");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{accountInfo}==>An error occurred while trying to join the squad: {ex.Message}");
+        }
+    }
 
     static async Task SendVisitRequest(UrlInfo url, string accountInfo)
     {
